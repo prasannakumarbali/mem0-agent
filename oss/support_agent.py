@@ -81,11 +81,12 @@ class CustomerSupportAIAgent:
         # what we actually sent (mem0 approach)
         tokens_used = count_tokens(full_prompt)
 
-        # what we would have sent without mem0 (full history approach)
+        # what we would have sent without mem0 (full history + current message)
         full_history_str = ""
         for msg in conversation_history:
             full_history_str += f"{msg['role']}: {msg['content']}\n"
-        naive_prompt = f"You are a helpful customer support AI agent.\n\n{full_history_str}Customer: {query}\nAgent:"
+        full_history_str += f"user: {query}\n"
+        naive_prompt = f"You are a helpful customer support AI agent.\n\n{full_history_str}Agent:"
         tokens_naive = count_tokens(naive_prompt)
 
         # savings = naive - actual (memories are much shorter than full history)
