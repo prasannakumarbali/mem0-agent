@@ -49,11 +49,10 @@ class CustomerSupportAIAgent:
 
         # session metrics
         self.session_tokens_used = 0
-        self.session_tokens_saved = 0
         self.session_turns = 0
         self.session_start = time.time()
 
-    def handle_query(self, query, user_id, conversation_history):
+    def handle_query(self, query, user_id):
         turn_start = time.time()
 
         # Step 1: search relevant memories
@@ -74,20 +73,7 @@ class CustomerSupportAIAgent:
 
         # --- token tracking ---
         tokens_used = count_tokens(full_prompt)
-
-        # naive would send full raw history every turn
-        full_history_str = ""
-        for msg in conversation_history:
-            full_history_str += f"{msg['role']}: {msg['content']}\n"
-        full_history_str += f"user: {query}\n"
-        naive_prompt = f"You are a helpful customer support AI agent.\n\n{full_history_str}Agent:"
-        tokens_naive = count_tokens(naive_prompt)
-
-        # savings = naive - actual (memories are much shorter than full history)
-        tokens_saved = max(0, tokens_naive - tokens_used)
-
         self.session_tokens_used += tokens_used
-        self.session_tokens_saved += tokens_saved
         self.session_turns += 1
 
         # Step 4: get response from Gemini
@@ -99,8 +85,7 @@ class CustomerSupportAIAgent:
 
         turn_time = round(time.time() - turn_start, 2)
 
-        # print per-turn metrics
-        print(f"  [tokens used: {tokens_used} | saved vs naive: {tokens_saved} | time: {turn_time}s]")
+        print(f"  [tokens used: {tokens_used} | memories: {len(relevant_memories['results'])} | time: {turn_time}s]")
 
         # Step 5: store full exchange in memory
         self.memory.add(
@@ -120,16 +105,11 @@ class CustomerSupportAIAgent:
 
     def print_session_stats(self):
         session_time = round(time.time() - self.session_start, 2)
-        naive_total = self.session_tokens_used + self.session_tokens_saved
-        saving_pct = round((self.session_tokens_saved / naive_total * 100), 1) if naive_total > 0 else 0
-
         print("\n========== Session Stats ==========")
         print(f"  Turns                : {self.session_turns}")
         print(f"  Session duration     : {session_time}s")
         print(f"  Tokens used (mem0)   : {self.session_tokens_used}")
-        print(f"  Tokens without mem0  : {naive_total}")
-        print(f"  Tokens saved         : {self.session_tokens_saved}")
-        print(f"  Token saving %       : {saving_pct}%")
+        print(f"  See compare_approaches.py for token savings benchmark")
         print("===================================\n")
 
     def chat(self, user_id):
@@ -137,8 +117,6 @@ class CustomerSupportAIAgent:
         print("Type 'memories' to see what I remember about you.")
         print("Type 'stats'    to see token savings so far.")
         print("Type 'exit'     to end the session.\n")
-
-        conversation_history = []
 
         while True:
             user_input = input("You: ").strip()
@@ -166,11 +144,8 @@ class CustomerSupportAIAgent:
                 self.print_session_stats()
                 continue
 
-            response = self.handle_query(user_input, user_id, conversation_history)
+            response = self.handle_query(user_input, user_id)
             print(f"Agent: {response}\n")
-
-            conversation_history.append({"role": "user", "content": user_input})
-            conversation_history.append({"role": "assistant", "content": response})
 
 
 if __name__ == "__main__":
