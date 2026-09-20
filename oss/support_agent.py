@@ -69,19 +69,13 @@ class CustomerSupportAIAgent:
             f"Customer Memory:\n{memories_str if memories_str else 'No past history found.'}"
         )
 
-        # Step 3: build full prompt with conversation history
-        history_str = ""
-        for msg in conversation_history:
-            role = "Customer" if msg["role"] == "user" else "Agent"
-            history_str += f"{role}: {msg['content']}\n"
-
-        full_prompt = f"{system_prompt}\n\n{history_str}Customer: {query}\nAgent:"
+        # Step 3: build prompt — memories replace history (no raw history sent)
+        full_prompt = f"{system_prompt}\n\nCustomer: {query}\nAgent:"
 
         # --- token tracking ---
-        # what we actually sent (mem0 approach)
         tokens_used = count_tokens(full_prompt)
 
-        # what we would have sent without mem0 (full history + current message)
+        # naive would send full raw history every turn
         full_history_str = ""
         for msg in conversation_history:
             full_history_str += f"{msg['role']}: {msg['content']}\n"
